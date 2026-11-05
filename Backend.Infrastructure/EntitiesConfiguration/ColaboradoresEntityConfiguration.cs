@@ -47,7 +47,7 @@ namespace Backend.Infrastructure.EntitiesConfiguration
             builder.Property(c => c.Ativo)
                 .IsRequired()
                 .HasColumnName("Ativo")
-                .HasComment("Indica se o colaborador está ativo ou não");
+                .HasComment("Indica se o colaborador está ativo ou não").HasDefaultValue(true);
         }
     }
 }

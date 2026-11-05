@@ -47,19 +47,27 @@ app.MapGet("/alive", () => Results.Json(new
     horario = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"),
     version = "1.0.0"
 }))
-    .WithTags("Diagnóstico")
+    .WithTags("Status")
     .WithSummary("Confere se a API está funcionando");
 
-    app.MapGet("/banco", async (ApplicationDbContext db) => Results.Json(new
-    {
-        conectado = await db.Database.CanConnectAsync( ),
-        banco = EnvironmentVariables.DbDatabase,
-        schema = EnvironmentVariables.DbSchema,
-    }))
-    .WithTags("Diagnóstico")
-    .WithSummary("Confere a conexão com o PostGreSQL");
+app.MapGet("/banco", async (ApplicationDbContext db) => Results.Json(new
+{
+    conectado = await db.Database.CanConnectAsync(),
+    banco = EnvironmentVariables.DbDatabase,
+    schema = EnvironmentVariables.DbSchema,
+}))
+.WithTags("Status")
+.WithSummary("Confere a conexão com o PostGreSQL");
 
 app.MapGet("/banco/script", (ApplicationDbContext db) => db.Database.GenerateCreateScript())
-    .WithTags("Diagnóstico").WithSummary("Mostra o CREATE TABLE gerado pelo EF");
+    .WithTags("Status").WithSummary("Mostra o CREATE TABLE gerado pelo EF");
+
+app.MapGet("/Colaboradores/all", async (ApplicationDbContext db) => await db.Colaboradores.IgnoreQueryFilters().ToListAsync())
+    .WithTags("Colaboradores").WithSummary("Mostra todos os colaboradores cadastrados no banco, incluindo os soft deleted");
+app.MapGet("/Colaboradores", async (ApplicationDbContext db) => await db.Colaboradores.ToListAsync())
+    .WithTags("Colaboradores").WithSummary("Mostra os colaboradores cadastrados no banco");
+
+
+
 app.MapControllers();
 app.Run();

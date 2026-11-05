@@ -37,7 +37,9 @@ namespace Backend.Infrastructure.Migrations
                         .HasComment("Data de admissão do colaborador");
 
                     b.Property<bool>("Ativo")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
+                        .HasDefaultValue(true)
                         .HasColumnName("Ativo")
                         .HasComment("Indica se o colaborador está ativo ou não");
 
