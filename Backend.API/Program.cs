@@ -1,41 +1,65 @@
+using System.Globalization;
+using Backend.CrossCutting.IoC;
+using Backend.Domain.EnvironmentVariables;
+using Backend.Infrastructure.Context;
+using dotenv.net;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi;
+
+// Porutgues do Brasil em todo o sistema (datas e números)
+var ptBr = new CultureInfo("pt-BR");
+CultureInfo.DefaultThreadCurrentCulture = ptBr;
+CultureInfo.DefaultThreadCurrentUICulture = ptBr;
+
+
+// Carrega as variáveis de ambiente do arquivo .env
+DotEnv.Load();
+EnvironmentVariables.Validate();
+
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+// Adiciona serviços ao contêiner.
+builder.Services.AddControllers();
+builder.Services.ServiceInjection();
 
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "Sac.API",
+        Version = "v1.0",
+        Description = "API do sistema SAC",
+    });
+});
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+await ApplicationDbContextMigrator.MigrateAsync(app.Services);
+
+app.UseSwagger();
+app.UseSwaggerUI();
+app.MapGet("/alive", () => Results.Json(new
+
 {
-    app.MapOpenApi();
-}
+    status = "alive",
+    sistema = "Sac",
+    horario = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"),
+    version = "1.0.0"
+}))
+    .WithTags("Diagnóstico")
+    .WithSummary("Confere se a API está funcionando");
 
-app.UseHttpsRedirection();
+    app.MapGet("/banco", async (ApplicationDbContext db) => Results.Json(new
+    {
+        conectado = await db.Database.CanConnectAsync( ),
+        banco = EnvironmentVariables.DbDatabase,
+        schema = EnvironmentVariables.DbSchema,
+    }))
+    .WithTags("Diagnóstico")
+    .WithSummary("Confere a conexão com o PostGreSQL");
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
-
+app.MapGet("/banco/script", (ApplicationDbContext db) => db.Database.GenerateCreateScript())
+    .WithTags("Diagnóstico").WithSummary("Mostra o CREATE TABLE gerado pelo EF");
+app.MapControllers();
 app.Run();
-
-internal record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
